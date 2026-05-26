@@ -3,8 +3,14 @@ from agents import isg_uzmani, isg_muduru, raporlama_ajani
 from tasks import olay_bildirimi_gorevi
 
 
-def isg_ekibi_olustur(olay_metni):
-    """Verilen olay metni için İSG ekibini yapılandırıp döndürür."""
+def isg_ekibi_olustur(olay_metni, step_callback=None, task_callback=None):
+    """Verilen olay metni için İSG ekibini yapılandırıp döndürür.
+
+    Args:
+        olay_metni: Kullanıcının girdiği olay açıklaması.
+        step_callback: Her ajan adımında tetiklenir (AgentAction | AgentFinish).
+        task_callback: Her görev bitişinde tetiklenir (TaskOutput).
+    """
     gorevler = olay_bildirimi_gorevi(olay_metni)
 
     return Crew(
@@ -12,4 +18,6 @@ def isg_ekibi_olustur(olay_metni):
         tasks=gorevler,
         process=Process.sequential,
         verbose=True,
+        step_callback=step_callback,
+        task_callback=task_callback,
     )
