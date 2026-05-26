@@ -60,7 +60,7 @@ def olay_bildirimi_gorevi(
             "2. En az 2 düzeltici/önleyici faaliyet (DÖF) tanımla\n"
             "3. Her DÖF için sorumlu kişi/departman ve tahmini tamamlanma süresi belirle\n"
             "4. Bütçe gerekiyorsa yaklaşık maliyet öngör\n"
-            "5. Uzmanın kök neden analizi 5 adımdan azsa veya mevzuat referansı eksikse, bunu DÖF önerilerinin başında açıkça belirt ve eksik analizi kendin tamamla.\n "
+            "5. Uzmanın kök neden analizi 5 adımdan azsa veya mevzuat referansı eksikse, bunu DÖF önerilerinin başında açıkça belirt ve eksik analizi kendin tamamla.\n\n"
             "Resmi bir dil kullan ama anlaşılır ol. Türkçe yaz."
         ),
         expected_output="Onay durumu, en az 2 DÖF (açıklama, sorumlu, süre, bütçe), ek öneriler. Türkçe.",
