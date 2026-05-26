@@ -14,20 +14,11 @@ if not groq_api_key:
         "Streamlit Cloud: Settings → Secrets → GROQ_API_KEY = 'gsk_...'"
     )
 
-# "groq/" prefix yoksa ekle — LiteLLM provider routing için gerekli
+# "groq/" prefix yoksa ekle
 if not model_name.startswith("groq/"):
     model_name = f"groq/{model_name}"
 
-# ── Groq uyumluluk düzeltmesi ─────────────────────────────────────────────────
-# CrewAI 1.14.x, Anthropic prompt-caching için mesajlara cache_breakpoint /
-# cache_control alanları ekliyor. Groq bu alanları reddediyor.
-# Çözüm 1: LITELLM_DROP_PARAMS — LiteLLM bilinmeyen parametreleri atar.
-# Çözüm 2: ANTHROPIC_CACHE_ENABLED=false — CrewAI cache injection'ı kapatır.
-# İkisini birden set ediyoruz; hangisi önce devreye girirse kazanır.
-os.environ["LITELLM_DROP_PARAMS"] = "true"
-os.environ["ANTHROPIC_CACHE_ENABLED"] = "false"
-
-# ── LLM nesnesi (CrewAI 1.x — crewai.LLM) ────────────────────────────────────
+# ── LLM nesnesi ───────────────────────────────────────────────────────────────
 llm = LLM(
     model=model_name,
     api_key=groq_api_key,

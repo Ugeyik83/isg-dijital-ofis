@@ -1,10 +1,17 @@
 import os
 
-# ── Groq uyumluluk: tüm import'lardan ÖNCE set edilmeli ──────────────────────
+# ── Groq uyumluluk: tüm import'lardan ÖNCE ───────────────────────────────────
 # CrewAI 1.14.x mesajlara cache_breakpoint ekliyor; Groq bunu reddediyor.
-# Bu env değişkenleri Python modülü yüklenmeden önce işletim sistemine yazılır.
-os.environ["LITELLM_DROP_PARAMS"] = "true"
-os.environ["ANTHROPIC_CACHE_ENABLED"] = "false"
+# Monkey-patch: mark_cache_breakpoint'i no-op yap.
+# Bu satırlar crewai modülü yüklenmeden çalışmalı — bu yüzden buradalar.
+def _noop_cache_breakpoint(message):
+    """Groq uyumluluğu için cache_breakpoint eklemeyi devre dışı bırakır."""
+    return message
+
+import crewai.llms.cache as _crewai_cache
+_crewai_cache.mark_cache_breakpoint = _noop_cache_breakpoint
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 import streamlit as st
 import datetime
@@ -40,7 +47,7 @@ with st.sidebar:
         "- 📋 Raporlama Sorumlusu"
     )
     st.divider()
-    st.caption("v1.2 - Dijital İkiz Prototip")
+    st.caption("v1.3 - Dijital İkiz Prototip")
 
 # ── Session state başlatma ────────────────────────────────────────────────────
 if "olay_metni" not in st.session_state:
