@@ -4,83 +4,87 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ── API anahtarı ve model yapılandırması ──────────────────────────────────────
 groq_api_key = os.getenv("GROQ_API_KEY")
-model_name = os.getenv("LLM_MODEL_NAME", "llama-3.3-70b-versatile")
-
 if not groq_api_key:
     raise EnvironmentError(
         "GROQ_API_KEY bulunamadı. "
         "Streamlit Cloud: Settings → Secrets → GROQ_API_KEY = 'gsk_...'"
     )
 
-# "groq/" prefix yoksa ekle
-if not model_name.startswith("groq/"):
-    model_name = f"groq/{model_name}"
+# ── LLM fabrikası ─────────────────────────────────────────────────────────────
+# Görsel varsa vision modeli, yoksa standart model kullanılır.
+# Groq vision: llama-3.2-11b-vision-preview
+# Groq standart: llama-3.3-70b-versatile
 
-# ── LLM nesnesi ───────────────────────────────────────────────────────────────
-llm = LLM(
-    model=model_name,
-    api_key=groq_api_key,
-    temperature=0.1,
-)
+STANDART_MODEL = os.getenv("LLM_MODEL_NAME", "llama-3.3-70b-versatile")
+VISION_MODEL   = os.getenv("LLM_VISION_MODEL", "llama-3.2-11b-vision-preview")
 
-print(f"✅ CrewAI LLM başarıyla yapılandırıldı: {model_name}")
 
-# ── Ortak ajan parametreleri ──────────────────────────────────────────────────
-_base = {
-    "llm": llm,
-    "verbose": True,
-    "allow_delegation": False,
-}
+def llm_olustur(vision: bool = False) -> LLM:
+    """Standart veya vision LLM nesnesi döndürür."""
+    model_adi = VISION_MODEL if vision else STANDART_MODEL
+    if not model_adi.startswith("groq/"):
+        model_adi = f"groq/{model_adi}"
+    return LLM(model=model_adi, api_key=groq_api_key, temperature=0.1)
 
-# ── Ajan Tanımları ────────────────────────────────────────────────────────────
 
-isg_uzmani = Agent(
-    role="İSG Uzmanı",
-    goal=(
-        "Olayları yerinde inceleyerek kök neden analizi yapmak "
-        "ve ilk değerlendirme raporu hazırlamak."
-    ),
-    backstory=(
-        "Sen, sahada aktif çalışan deneyimli bir İSG uzmanısın. Her olayda hemen "
-        "olay yerine gider, tanık ifadelerini toplar, fiziksel kanıtları inceler ve "
-        "'5 Neden' gibi yöntemlerle temel nedeni bulursun. Teknik ve objektif bir dil "
-        "kullanırsın.\n\n"
-        "Önemli: Yanıtlarını her zaman Türkçe ver. İş Sağlığı ve Güvenliği "
-        "terminolojisini Türkçe kullan (örneğin: DÖF, KKD, LOTO)."
-    ),
-    **_base
-)
+def ajanlar_olustur(vision: bool = False):
+    """İSG ajan üçlüsünü oluşturup döndürür.
 
-isg_muduru = Agent(
-    role="İSG Müdürü",
-    goal=(
-        "İSG süreçlerini yönetmek, yasal uygunluğu sağlamak, "
-        "düzeltici faaliyetleri onaylamak ve üst yönetime raporlamak."
-    ),
-    backstory=(
-        "Sen 15 yıllık İSG yönetimi tecrübesine sahip bir müdürsün. Şirketin tüm "
-        "İSG politikalarından sorumlusun. Uzmanın bulgularını değerlendirir, yasal "
-        "mevzuata (4857, 6331 sayılı kanunlar) uygunluğu kontrol eder, bütçe ve iş "
-        "gücü planlaması yaparak DÖF'leri onaylar ve gerektiğinde diğer departmanlara "
-        "iş atarsın.\n\n"
-        "Önemli: Yanıtlarını her zaman Türkçe ver. Resmi bir dil kullan ama anlaşılır ol."
-    ),
-    llm=llm,
-    verbose=True,
-    allow_delegation=True,
-)
+    Args:
+        vision: True ise vision modeli kullanılır (görsel içerik varsa).
 
-raporlama_ajani = Agent(
-    role="Raporlama ve Dokümantasyon Sorumlusu",
-    goal="Resmi olay kaydı ve düzeltici faaliyet formunu kusursuz şekilde hazırlamak.",
-    backstory=(
-        "Sen titiz bir dokümantasyon uzmanısın. İSG mevzuatına uygun formatları "
-        "bilirsin. Elindeki verilerle 'İş Kazası Bildirim Formu' ve 'Düzeltici Faaliyet "
-        "Talimatı'nı hatasız doldurursun. Her raporu Türkçe ve resmi formatta "
-        "hazırlarsın.\n\n"
-        "Önemli: Tüm çıktılarını Türkçe oluştur. Tarih formatı GG.AA.YYYY olmalı."
-    ),
-    **_base
-)
+    Returns:
+        (isg_uzmani, isg_muduru, raporlama_ajani) tuple'ı.
+    """
+    llm = llm_olustur(vision=vision)
+    model_log = VISION_MODEL if vision else STANDART_MODEL
+    print(f"✅ CrewAI LLM başarıyla yapılandırıldı: groq/{model_log}")
+
+    _base = {"llm": llm, "verbose": True, "allow_delegation": False}
+
+    isg_uzmani = Agent(
+        role="İSG Uzmanı",
+        goal=(
+            "Olayları yerinde inceleyerek kök neden analizi yapmak "
+            "ve ilk değerlendirme raporu hazırlamak."
+        ),
+        backstory=(
+            "Sen, sahada aktif çalışan deneyimli bir İSG uzmanısın. Her olayda hemen "
+            "olay yerine gider, tanık ifadelerini toplar, fiziksel kanıtları ve "
+            "varsa fotoğraf/video kayıtlarını inceler; '5 Neden' yöntemiyle temel "
+            "nedeni bulursun. Teknik ve objektif bir dil kullanırsın.\n\n"
+            "Önemli: Yanıtlarını her zaman Türkçe ver (DÖF, KKD, LOTO vb.)."
+        ),
+        **_base
+    )
+
+    isg_muduru = Agent(
+        role="İSG Müdürü",
+        goal=(
+            "İSG süreçlerini yönetmek, yasal uygunluğu sağlamak, "
+            "düzeltici faaliyetleri onaylamak ve üst yönetime raporlamak."
+        ),
+        backstory=(
+            "Sen 15 yıllık İSG yönetimi tecrübesine sahip bir müdürsün. "
+            "Uzmanın bulgularını değerlendirir, 4857 ve 6331 sayılı kanunlara "
+            "uygunluğu kontrol eder, DÖF'leri onaylar.\n\n"
+            "Önemli: Yanıtlarını her zaman Türkçe ver."
+        ),
+        llm=llm,
+        verbose=True,
+        allow_delegation=True,
+    )
+
+    raporlama_ajani = Agent(
+        role="Raporlama ve Dokümantasyon Sorumlusu",
+        goal="Resmi olay kaydı ve düzeltici faaliyet formunu kusursuz şekilde hazırlamak.",
+        backstory=(
+            "Sen titiz bir dokümantasyon uzmanısın. İSG mevzuatına uygun formatları "
+            "bilirsin. Her raporu Türkçe ve resmi formatta hazırlarsın. "
+            "Tarih formatı GG.AA.YYYY olmalı."
+        ),
+        **_base
+    )
+
+    return isg_uzmani, isg_muduru, raporlama_ajani

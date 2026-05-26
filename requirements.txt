@@ -57,3 +57,7 @@ python-dotenv>=1.0.0
 pydantic>=2.0.0
 pyyaml>=6.0.0
 loguru>=0.7.0
+
+## ── Görsel / Video işleme ─────────────────────────────────────────────────────
+opencv-python-headless>=4.9.0   # Video karesi çıkarma (headless = sunucu uyumlu)
+Pillow>=10.0.0                  # Kare → JPEG dönüşümü
