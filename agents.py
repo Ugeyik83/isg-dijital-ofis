@@ -1,16 +1,40 @@
 import os
 from crewai import Agent
-from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Groq LLM yapılandırması
-llm = ChatGroq(
-    temperature=0.1,
-    groq_api_key=os.getenv("GROQ_API_KEY"),
-    model_name=os.getenv("LLM_MODEL_NAME", "llama-3.3-70b-versatile")
-)
+# Groq API anahtarını al
+groq_api_key = os.getenv("GROQ_API_KEY")
+model_name = os.getenv("LLM_MODEL_NAME", "llama-3.3-70b-versatile")
+
+# CrewAI 0.30+ sürümünde LLM string olarak belirtilebilir
+# veya uyumlu bir LangChain LLM nesnesi kullanılabilir
+try:
+    from langchain_groq import ChatGroq
+    llm = ChatGroq(
+        temperature=0.1,
+        groq_api_key=groq_api_key,
+        model_name=model_name
+    )
+    print(f"✅ Groq LLM başarıyla yüklendi: {model_name}")
+except ImportError:
+    print("⚠️ langchain-groq bulunamadı, varsayılan yapılandırma kullanılıyor")
+    # Alternatif: CrewAI'nin kendi LLM yapılandırmasını kullan
+    os.environ["OPENAI_API_BASE"] = "https://api.groq.com/openai/v1"
+    os.environ["OPENAI_API_KEY"] = groq_api_key
+    os.environ["OPENAI_MODEL_NAME"] = model_name
+    llm = None  # CrewAI varsayılan olarak OPENAI_* env değişkenlerini kullanır
+
+# Ajanları oluştur
+agent_kwargs = {
+    "verbose": True,
+    "allow_delegation": False
+}
+
+# Eğer LLM başarıyla yüklendiyse ekle
+if llm is not None:
+    agent_kwargs["llm"] = llm
 
 isg_uzmani = Agent(
     role="İSG Uzmanı",
@@ -21,9 +45,7 @@ isg_uzmani = Agent(
     
     Önemli: Yanıtlarını her zaman Türkçe ver. İş Sağlığı ve Güvenliği terminolojisini
     Türkçe kullan (örneğin: DÖF - Düzeltici Önleyici Faaliyet, KKD - Kişisel Koruyucu Donanım).""",
-    verbose=True,
-    allow_delegation=False,
-    llm=llm
+    **agent_kwargs
 )
 
 isg_muduru = Agent(
@@ -35,9 +57,8 @@ isg_muduru = Agent(
     yaparak DÖF'leri onaylar ve gerektiğinde üretim müdürü gibi diğer departmanlara iş atarsın.
     
     Önemli: Yanıtlarını her zaman Türkçe ver. Resmi bir dil kullan ama anlaşılır ol.""",
-    verbose=True,
     allow_delegation=True,
-    llm=llm
+    **{k: v for k, v in agent_kwargs.items() if k != "allow_delegation"}
 )
 
 raporlama_ajani = Agent(
@@ -48,7 +69,5 @@ raporlama_ajani = Agent(
     hatasız doldurursun. Her raporu Türkçe ve resmi formatta hazırlarsın.
     
     Önemli: Tüm çıktılarını Türkçe oluştur. Tarih formatı GG.AA.YYYY şeklinde olmalı.""",
-    verbose=True,
-    allow_delegation=False,
-    llm=llm
+    **agent_kwargs
 )
