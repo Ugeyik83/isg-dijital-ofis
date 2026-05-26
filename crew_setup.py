@@ -3,11 +3,10 @@ from crewai import Crew, Process
 from agents import isg_uzmani, isg_muduru, raporlama_ajani
 from tasks import olay_bildirimi_gorevi
 
-# ── Groq uyumluluk düzeltmesi ─────────────────────────────────────────────────
-# CrewAI 1.14.x mesajlara Anthropic prompt-caching alanları (cache_breakpoint,
-# cache_control) ekliyor. Groq bu alanları reddediyor → BadRequestError.
-# LITELLM_DROP_PARAMS=true ile litellm bilinmeyen parametreleri sessizce atar.
+# agents.py içinde zaten set ediliyor; burada da güvence olarak tekrarlıyoruz.
+# (Streamlit bazı durumlarda modülleri farklı sırada import edebiliyor.)
 os.environ["LITELLM_DROP_PARAMS"] = "true"
+os.environ["ANTHROPIC_CACHE_ENABLED"] = "false"
 
 
 def isg_ekibi_olustur(olay_metni):

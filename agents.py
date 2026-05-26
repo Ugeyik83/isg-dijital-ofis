@@ -4,28 +4,34 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# API anahtarı ve model yapılandırması
+# ── API anahtarı ve model yapılandırması ──────────────────────────────────────
 groq_api_key = os.getenv("GROQ_API_KEY")
-model_name = os.getenv("LLM_MODEL_NAME", "groq/llama-3.3-70b-versatile")
+model_name = os.getenv("LLM_MODEL_NAME", "llama-3.3-70b-versatile")
 
-# CrewAI 1.x: LLM nesnesi crewai.LLM üzerinden tanımlanır.
-# "groq/model-adı" prefix formatı litellm tarafından yönlendirilir.
-# Bu sayede langchain_groq import çakışması tamamen ortadan kalkar.
 if not groq_api_key:
     raise EnvironmentError(
         "GROQ_API_KEY bulunamadı. "
-        "Streamlit Cloud'da: Settings → Secrets → GROQ_API_KEY ekleyin. "
-        "Yerel geliştirmede: .env dosyasına GROQ_API_KEY=gsk_... yazın."
+        "Streamlit Cloud: Settings → Secrets → GROQ_API_KEY = 'gsk_...'"
     )
 
-# model_name "groq/" prefix'i içermiyorsa otomatik ekle
+# "groq/" prefix yoksa ekle — LiteLLM provider routing için gerekli
 if not model_name.startswith("groq/"):
     model_name = f"groq/{model_name}"
 
+# ── Groq uyumluluk düzeltmesi ─────────────────────────────────────────────────
+# CrewAI 1.14.x, Anthropic prompt-caching için mesajlara cache_breakpoint /
+# cache_control alanları ekliyor. Groq bu alanları reddediyor.
+# Çözüm 1: LITELLM_DROP_PARAMS — LiteLLM bilinmeyen parametreleri atar.
+# Çözüm 2: ANTHROPIC_CACHE_ENABLED=false — CrewAI cache injection'ı kapatır.
+# İkisini birden set ediyoruz; hangisi önce devreye girirse kazanır.
+os.environ["LITELLM_DROP_PARAMS"] = "true"
+os.environ["ANTHROPIC_CACHE_ENABLED"] = "false"
+
+# ── LLM nesnesi (CrewAI 1.x — crewai.LLM) ────────────────────────────────────
 llm = LLM(
     model=model_name,
     api_key=groq_api_key,
-    temperature=0.1
+    temperature=0.1,
 )
 
 print(f"✅ CrewAI LLM başarıyla yapılandırıldı: {model_name}")
@@ -70,7 +76,6 @@ isg_muduru = Agent(
         "iş atarsın.\n\n"
         "Önemli: Yanıtlarını her zaman Türkçe ver. Resmi bir dil kullan ama anlaşılır ol."
     ),
-    # allow_delegation sadece müdür için True
     llm=llm,
     verbose=True,
     allow_delegation=True,

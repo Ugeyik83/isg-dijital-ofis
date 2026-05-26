@@ -1,5 +1,12 @@
-import streamlit as st
 import os
+
+# ── Groq uyumluluk: tüm import'lardan ÖNCE set edilmeli ──────────────────────
+# CrewAI 1.14.x mesajlara cache_breakpoint ekliyor; Groq bunu reddediyor.
+# Bu env değişkenleri Python modülü yüklenmeden önce işletim sistemine yazılır.
+os.environ["LITELLM_DROP_PARAMS"] = "true"
+os.environ["ANTHROPIC_CACHE_ENABLED"] = "false"
+
+import streamlit as st
 import datetime
 
 # ── Streamlit secrets → env (production) ─────────────────────────────────────
@@ -33,7 +40,7 @@ with st.sidebar:
         "- 📋 Raporlama Sorumlusu"
     )
     st.divider()
-    st.caption("v1.1 - Dijital İkiz Prototip")
+    st.caption("v1.2 - Dijital İkiz Prototip")
 
 # ── Session state başlatma ────────────────────────────────────────────────────
 if "olay_metni" not in st.session_state:
@@ -82,7 +89,6 @@ baslat = st.button("🚀 Simülasyonu Başlat", type="primary", use_container_wi
 
 # ── Simülasyon ────────────────────────────────────────────────────────────────
 if baslat and olay.strip():
-    # Import'ları burada yapıyoruz; böylece API key yoksa sayfa yine de yüklenir
     try:
         from crew_setup import isg_ekibi_olustur
     except EnvironmentError as env_err:
@@ -99,12 +105,8 @@ if baslat and olay.strip():
 
             progress.progress(80, text="📋 Rapor hazırlanıyor...")
 
-            # CrewAI 1.x: kickoff() → CrewOutput nesnesi döner.
-            # .raw özelliği ham metin string'ini verir.
-            if hasattr(crew_output, "raw"):
-                sonuc_metni = crew_output.raw
-            else:
-                sonuc_metni = str(crew_output)
+            # CrewAI 1.x: kickoff() → CrewOutput; .raw string içerir
+            sonuc_metni = crew_output.raw if hasattr(crew_output, "raw") else str(crew_output)
 
             progress.progress(100, text="✅ Tamamlandı!")
             progress.empty()
