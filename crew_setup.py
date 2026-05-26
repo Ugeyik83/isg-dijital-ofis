@@ -9,6 +9,6 @@ def isg_ekibi_olustur(olay_metni):
     return Crew(
         agents=[isg_uzmani, isg_muduru, raporlama_ajani],
         tasks=gorevler,
-        process=Process.sequential,  # Sıralı iş akışı
+        process=Process.sequential,
         verbose=True
     )
