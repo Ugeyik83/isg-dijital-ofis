@@ -1,13 +1,14 @@
 import streamlit as st
 import os
-from crew_setup import isg_ekibi_olustur
+import datetime
 
-# Streamlit secrets'tan yapılandırma (production için)
-if hasattr(st, 'secrets') and 'GROQ_API_KEY' in st.secrets:
-    os.environ['GROQ_API_KEY'] = st.secrets['GROQ_API_KEY']
-    os.environ['LLM_PROVIDER'] = st.secrets.get('LLM_PROVIDER', 'groq')
-    os.environ['LLM_MODEL_NAME'] = st.secrets.get('LLM_MODEL_NAME', 'llama-3.3-70b-versatile')
+# ── Streamlit secrets → env (production) ─────────────────────────────────────
+if hasattr(st, "secrets"):
+    for key in ("GROQ_API_KEY", "LLM_PROVIDER", "LLM_MODEL_NAME"):
+        if key in st.secrets:
+            os.environ[key] = st.secrets[key]
 
+# ── Sayfa yapılandırması ──────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Sanal İSG Ofisi",
     page_icon="🦺",
@@ -15,109 +16,129 @@ st.set_page_config(
 )
 
 st.title("🦺 Sanal İSG Ofisi (Dijital İkiz Prototip)")
-st.markdown("""
-Bir iş kazası, ramak kala veya sağlık olayı bildirimi yapın; 
-**İSG Uzmanı**, **İSG Müdürü** ve **Raporlama Sorumlusu** ajanları iş başına geçsin.
-""")
+st.markdown(
+    "Bir iş kazası, ramak kala veya sağlık olayı bildirimi yapın; "
+    "**İSG Uzmanı**, **İSG Müdürü** ve **Raporlama Sorumlusu** ajanları iş başına geçsin."
+)
 
-# Sidebar bilgi
+# ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.header("⚙️ Sistem Bilgisi")
-    st.info(f"""
-    **Kullanılan Model:** {os.getenv('LLM_MODEL_NAME', 'llama-3.3-70b-versatile')}
-    
-    **Aktif Ajanlar:**
-    - 🧑‍🔧 İSG Uzmanı
-    - 👨‍💼 İSG Müdürü
-    - 📋 Raporlama Sorumlusu
-    """)
-    
+    model = os.getenv("LLM_MODEL_NAME", "llama-3.3-70b-versatile")
+    st.info(
+        f"**Kullanılan Model:** {model}\n\n"
+        "**Aktif Ajanlar:**\n"
+        "- 🧑‍🔧 İSG Uzmanı\n"
+        "- 👨‍💼 İSG Müdürü\n"
+        "- 📋 Raporlama Sorumlusu"
+    )
     st.divider()
-    st.caption("v1.0 - Dijital İkiz Prototip")
+    st.caption("v1.1 - Dijital İkiz Prototip")
 
-# Ana girdi alanı
+# ── Session state başlatma ────────────────────────────────────────────────────
+if "olay_metni" not in st.session_state:
+    st.session_state["olay_metni"] = ""
+
+# ── Örnek senaryolar ──────────────────────────────────────────────────────────
+ORNEKLER = {
+    "🏭 Makine Kazası": (
+        "Pazartesi sabahı, üretim hattında bir operatör koruyucu siperi kaldırılmış "
+        "makineye parça yerleştirirken parmağını sıkıştırdı. "
+        "İş ayakkabısı ve eldiveni vardı ancak siper devre dışı bırakılmış."
+    ),
+    "🧪 Kimyasal Sızıntı": (
+        "Kimya laboratuvarında çalışan bir teknisyen, çeker ocak çalışmadığı için "
+        "asit buharına maruz kaldı. Solunum zorluğu şikayetiyle revire gitti."
+    ),
+    "🚧 Düşme Kazası": (
+        "İnşaat alanında 4. katta çalışan bir işçi, güvenlik halatını takmadan "
+        "iskeleye çıktı. Denge kaybederek 1 metre aşağıdaki platforma düştü. "
+        "Sol kolunda kırık tespit edildi."
+    ),
+}
+
 col1, col2 = st.columns([2, 1])
+
+with col2:
+    st.markdown("### Örnek Senaryolar")
+    for etiket, metin in ORNEKLER.items():
+        if st.button(etiket, use_container_width=True):
+            st.session_state["olay_metni"] = metin
 
 with col1:
     olay = st.text_area(
         "📝 Olay Açıklaması",
+        value=st.session_state["olay_metni"],
         height=180,
-        placeholder="Örn: Dün vardiyada depo bölümünde bir çalışan ıslak zeminde kaydı, "
-                   "kolunu incitti. İlk yardım yapıldı. Zemin yeni temizlenmiş ama uyarı "
-                   "levhası konmamıştı. Çalışanın kaymaz ayakkabısı vardı."
+        placeholder=(
+            "Örn: Dün vardiyada depo bölümünde bir çalışan ıslak zeminde kaydı, "
+            "kolunu incitti. İlk yardım yapıldı. Zemin yeni temizlenmiş ama uyarı "
+            "levhası konmamıştı."
+        ),
+        key="olay_input"
     )
 
-with col2:
-    st.markdown("### Örnek Senaryolar")
-    st.button(
-        "🏭 Makine Kazası",
-        help="Operatör koruyucusuz makinede parmağını sıkıştırdı",
-        on_click=lambda: st.session_state.update(
-            {'olay_ornek': "Pazartesi sabahı, üretim hattında bir operatör koruyucu siperi "
-                          "kaldırılmış makineye parça yerleştirirken parmağını sıkıştırdı. "
-                          "İş ayakkabısı ve eldiveni vardı ancak siper devre dışı bırakılmış."}
-        )
-    )
-    st.button(
-        "🧪 Kimyasal Sızıntı",
-        help="Laboratuvarda asit buharı soluyan teknisyen",
-        on_click=lambda: st.session_state.update(
-            {'olay_ornek': "Kimya laboratuvarında çalışan bir teknisyen, çeker ocak "
-                          "çalışmadığı için asit buharına maruz kaldı. Solunum zorluğu "
-                          "şikayetiyle revire gitti."}
-        )
-    )
-
-# Buton
 baslat = st.button("🚀 Simülasyonu Başlat", type="primary", use_container_width=True)
 
-# Otomatik doldurma
-if 'olay_ornek' in st.session_state and not olay:
-    olay = st.session_state['olay_ornek']
-
+# ── Simülasyon ────────────────────────────────────────────────────────────────
 if baslat and olay.strip():
+    # Import'ları burada yapıyoruz; böylece API key yoksa sayfa yine de yüklenir
+    try:
+        from crew_setup import isg_ekibi_olustur
+    except EnvironmentError as env_err:
+        st.error(f"⚙️ Yapılandırma hatası: {env_err}")
+        st.stop()
+
     with st.spinner("🔍 İSG Ekibi olayı değerlendiriyor..."):
+        progress = st.progress(0, text="🔄 Ekip hazırlanıyor...")
         try:
-            # Progress bar
-            progress_bar = st.progress(0, text="🔄 Olay analiz ediliyor...")
-            
             crew = isg_ekibi_olustur(olay)
-            
-            progress_bar.progress(30, text="🔍 İSG Uzmanı kök neden analizi yapıyor...")
-            sonuc = crew.kickoff()
-            
-            progress_bar.progress(80, text="📋 Rapor hazırlanıyor...")
-            progress_bar.progress(100, text="✅ Tamamlandı!")
-            progress_bar.empty()
-            
+            progress.progress(20, text="🔍 İSG Uzmanı kök neden analizi yapıyor...")
+
+            crew_output = crew.kickoff()
+
+            progress.progress(80, text="📋 Rapor hazırlanıyor...")
+
+            # CrewAI 1.x: kickoff() → CrewOutput nesnesi döner.
+            # .raw özelliği ham metin string'ini verir.
+            if hasattr(crew_output, "raw"):
+                sonuc_metni = crew_output.raw
+            else:
+                sonuc_metni = str(crew_output)
+
+            progress.progress(100, text="✅ Tamamlandı!")
+            progress.empty()
+
         except Exception as e:
-            st.error(f"❌ Hata oluştu: {str(e)}")
-            st.info("💡 Kontrol edin: GROQ_API_KEY doğru mu? İnternet bağlantınız var mı?")
+            progress.empty()
+            st.error(f"❌ Hata oluştu: {e}")
+            st.info(
+                "💡 Kontrol listesi:\n"
+                "- GROQ_API_KEY doğru mu? (Streamlit Cloud: Settings → Secrets)\n"
+                "- Groq hesabınızın rate limit'i dolmadı mı?\n"
+                "- İnternet bağlantısı var mı?"
+            )
             st.stop()
-    
-    # Sonuç gösterimi
+
     st.success("✅ İSG Değerlendirme Süreci Tamamlandı!")
-    
-    # Sekmeler halinde göster
+
     tab1, tab2 = st.tabs(["📋 Rapor", "📝 Ham Çıktı"])
-    
     with tab1:
-        st.markdown(sonuc)
-    
+        st.markdown(sonuc_metni)
     with tab2:
-        st.code(sonuc, language="markdown")
-    
-    # İndirme butonu
+        st.code(sonuc_metni, language="markdown")
+
+    dosya_adi = f"isg_raporu_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
     st.download_button(
         label="📥 Raporu İndir (TXT)",
-        data=str(sonuc),
-        file_name=f"isg_raporu_{__import__('datetime').datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+        data=sonuc_metni,
+        file_name=dosya_adi,
         mime="text/plain"
     )
-    
+
 elif baslat:
     st.warning("⚠️ Lütfen önce bir olay açıklaması girin.")
 
-# Footer
+# ── Footer ────────────────────────────────────────────────────────────────────
 st.divider()
-st.caption("© 2024 Sanal İSG Ofisi | CrewAI + Groq + Streamlit ile geliştirilmiştir.")
+st.caption("© 2025 Sanal İSG Ofisi | CrewAI + Groq + Streamlit ile geliştirilmiştir.")

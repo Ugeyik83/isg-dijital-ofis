@@ -1,73 +1,90 @@
 import os
-from crewai import Agent
+from crewai import Agent, LLM
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Groq API anahtarını al
+# API anahtarı ve model yapılandırması
 groq_api_key = os.getenv("GROQ_API_KEY")
-model_name = os.getenv("LLM_MODEL_NAME", "llama-3.3-70b-versatile")
+model_name = os.getenv("LLM_MODEL_NAME", "groq/llama-3.3-70b-versatile")
 
-# CrewAI 0.30+ sürümünde LLM string olarak belirtilebilir
-# veya uyumlu bir LangChain LLM nesnesi kullanılabilir
-try:
-    from langchain_groq import ChatGroq
-    llm = ChatGroq(
-        temperature=0.1,
-        groq_api_key=groq_api_key,
-        model_name=model_name
+# CrewAI 1.x: LLM nesnesi crewai.LLM üzerinden tanımlanır.
+# "groq/model-adı" prefix formatı litellm tarafından yönlendirilir.
+# Bu sayede langchain_groq import çakışması tamamen ortadan kalkar.
+if not groq_api_key:
+    raise EnvironmentError(
+        "GROQ_API_KEY bulunamadı. "
+        "Streamlit Cloud'da: Settings → Secrets → GROQ_API_KEY ekleyin. "
+        "Yerel geliştirmede: .env dosyasına GROQ_API_KEY=gsk_... yazın."
     )
-    print(f"✅ Groq LLM başarıyla yüklendi: {model_name}")
-except ImportError:
-    print("⚠️ langchain-groq bulunamadı, varsayılan yapılandırma kullanılıyor")
-    # Alternatif: CrewAI'nin kendi LLM yapılandırmasını kullan
-    os.environ["OPENAI_API_BASE"] = "https://api.groq.com/openai/v1"
-    os.environ["OPENAI_API_KEY"] = groq_api_key
-    os.environ["OPENAI_MODEL_NAME"] = model_name
-    llm = None  # CrewAI varsayılan olarak OPENAI_* env değişkenlerini kullanır
 
-# Ajanları oluştur
-agent_kwargs = {
+# model_name "groq/" prefix'i içermiyorsa otomatik ekle
+if not model_name.startswith("groq/"):
+    model_name = f"groq/{model_name}"
+
+llm = LLM(
+    model=model_name,
+    api_key=groq_api_key,
+    temperature=0.1
+)
+
+print(f"✅ CrewAI LLM başarıyla yapılandırıldı: {model_name}")
+
+# ── Ortak ajan parametreleri ──────────────────────────────────────────────────
+_base = {
+    "llm": llm,
     "verbose": True,
-    "allow_delegation": False
+    "allow_delegation": False,
 }
 
-# Eğer LLM başarıyla yüklendiyse ekle
-if llm is not None:
-    agent_kwargs["llm"] = llm
+# ── Ajan Tanımları ────────────────────────────────────────────────────────────
 
 isg_uzmani = Agent(
     role="İSG Uzmanı",
-    goal="Olayları yerinde inceleyerek kök neden analizi yapmak ve ilk değerlendirme raporu hazırlamak.",
-    backstory="""Sen, sahada aktif çalışan deneyimli bir İSG uzmanısın. Her olayda hemen 
-    olay yerine gider, tanık ifadelerini toplar, fiziksel kanıtları inceler ve '5 Neden' 
-    gibi yöntemlerle temel nedeni bulursun. Teknik ve objektif bir dil kullanırsın.
-    
-    Önemli: Yanıtlarını her zaman Türkçe ver. İş Sağlığı ve Güvenliği terminolojisini
-    Türkçe kullan (örneğin: DÖF - Düzeltici Önleyici Faaliyet, KKD - Kişisel Koruyucu Donanım).""",
-    **agent_kwargs
+    goal=(
+        "Olayları yerinde inceleyerek kök neden analizi yapmak "
+        "ve ilk değerlendirme raporu hazırlamak."
+    ),
+    backstory=(
+        "Sen, sahada aktif çalışan deneyimli bir İSG uzmanısın. Her olayda hemen "
+        "olay yerine gider, tanık ifadelerini toplar, fiziksel kanıtları inceler ve "
+        "'5 Neden' gibi yöntemlerle temel nedeni bulursun. Teknik ve objektif bir dil "
+        "kullanırsın.\n\n"
+        "Önemli: Yanıtlarını her zaman Türkçe ver. İş Sağlığı ve Güvenliği "
+        "terminolojisini Türkçe kullan (örneğin: DÖF, KKD, LOTO)."
+    ),
+    **_base
 )
 
 isg_muduru = Agent(
     role="İSG Müdürü",
-    goal="İSG süreçlerini yönetmek, yasal uygunluğu sağlamak, düzeltici faaliyetleri onaylamak ve üst yönetime raporlamak.",
-    backstory="""Sen 15 yıllık İSG yönetimi tecrübesine sahip bir müdürsün. Şirketin tüm 
-    İSG politikalarından sorumlusun. Uzmanın bulgularını değerlendirir, yasal mevzuata 
-    (4857, 6331 sayılı kanunlar vb.) uygunluğu kontrol eder, bütçe ve iş gücü planlaması 
-    yaparak DÖF'leri onaylar ve gerektiğinde üretim müdürü gibi diğer departmanlara iş atarsın.
-    
-    Önemli: Yanıtlarını her zaman Türkçe ver. Resmi bir dil kullan ama anlaşılır ol.""",
+    goal=(
+        "İSG süreçlerini yönetmek, yasal uygunluğu sağlamak, "
+        "düzeltici faaliyetleri onaylamak ve üst yönetime raporlamak."
+    ),
+    backstory=(
+        "Sen 15 yıllık İSG yönetimi tecrübesine sahip bir müdürsün. Şirketin tüm "
+        "İSG politikalarından sorumlusun. Uzmanın bulgularını değerlendirir, yasal "
+        "mevzuata (4857, 6331 sayılı kanunlar) uygunluğu kontrol eder, bütçe ve iş "
+        "gücü planlaması yaparak DÖF'leri onaylar ve gerektiğinde diğer departmanlara "
+        "iş atarsın.\n\n"
+        "Önemli: Yanıtlarını her zaman Türkçe ver. Resmi bir dil kullan ama anlaşılır ol."
+    ),
+    # allow_delegation sadece müdür için True
+    llm=llm,
+    verbose=True,
     allow_delegation=True,
-    **{k: v for k, v in agent_kwargs.items() if k != "allow_delegation"}
 )
 
 raporlama_ajani = Agent(
     role="Raporlama ve Dokümantasyon Sorumlusu",
     goal="Resmi olay kaydı ve düzeltici faaliyet formunu kusursuz şekilde hazırlamak.",
-    backstory="""Sen titiz bir dokümantasyon uzmanısın. İSG mevzuatına uygun formatları bilirsin. 
-    Elindeki verilerle 'İş Kazası Bildirim Formu' ve 'Düzeltici Faaliyet Talimatı'nı 
-    hatasız doldurursun. Her raporu Türkçe ve resmi formatta hazırlarsın.
-    
-    Önemli: Tüm çıktılarını Türkçe oluştur. Tarih formatı GG.AA.YYYY şeklinde olmalı.""",
-    **agent_kwargs
+    backstory=(
+        "Sen titiz bir dokümantasyon uzmanısın. İSG mevzuatına uygun formatları "
+        "bilirsin. Elindeki verilerle 'İş Kazası Bildirim Formu' ve 'Düzeltici Faaliyet "
+        "Talimatı'nı hatasız doldurursun. Her raporu Türkçe ve resmi formatta "
+        "hazırlarsın.\n\n"
+        "Önemli: Tüm çıktılarını Türkçe oluştur. Tarih formatı GG.AA.YYYY olmalı."
+    ),
+    **_base
 )

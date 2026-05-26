@@ -6,15 +6,20 @@ crewai==1.14.5
 crewai-tools>=0.14.0
 
 ## ── LLM Providers ────────────────────────────────────────────────────────────
+## NOT: langchain-groq 0.1.x eski langchain-core (<0.2) ister;
+##      langchain-google-genai 4.x ve langchain-mistralai 0.2+ ise
+##      langchain-core>=1.x ister. Çakışmayı önlemek için:
+##      - langchain-groq>=1.1.0  (langchain-core>=1.x uyumlu)
+##      - langchain-google-genai ve langchain-mistralai sabitlendi
 openai>=1.30.0
 groq>=0.9.0
 langchain-groq>=1.1.0
+langchain-core>=1.0.0,<2.0.0
 google-generativeai>=0.7.0
-langchain-google-genai>=1.0.0
+langchain-google-genai>=4.0.0,<5.0.0
 mistralai>=1.0.0
-langchain-mistralai>=0.1.0
+langchain-mistralai>=0.2.0,<1.0.0
 litellm>=1.40.0
-
 
 ## ── Sinyal Toplama ────────────────────────────────────────────────────────────
 requests>=2.31.0
