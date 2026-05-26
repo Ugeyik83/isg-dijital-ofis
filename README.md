@@ -1,110 +1,181 @@
-# 🦺 Sanal İSG Ofisi (Dijital İkiz Prototip)
+# 🦺 Sanal İSG Ofisi — Dijital İkiz Prototip
 
-**İş Sağlığı ve Güvenliği süreçlerini yapay zeka ajanlarıyla simüle eden, Streamlit tabanlı bir dijital ikiz prototipi.**
+**İş Sağlığı ve Güvenliği süreçlerini otonom yapay zeka ajanlarıyla simüle eden, Streamlit tabanlı çok-ajanlı sistem.**
 
-Bu proje, bir şirketteki İSG Müdürü, İSG Uzmanı ve Raporlama Sorumlusu rollerini otonom yapay zeka ajanları olarak modeller. Kullanıcının bildirdiği bir iş kazası veya ramak kala olayı, ajanlar tarafından analiz edilir, düzeltici/önleyici faaliyetler (DÖF) oluşturulur ve resmi bir rapor hazırlanır. Amaç, kurumsal İSG süreçlerinin yapay zeka ile nasıl otomatize edilebileceğini göstermektir.
+Kullanıcı bir iş kazası veya ramak kala bildirimi yapar; üç otonom ajan sırayla devreye girerek analiz, karar ve resmi raporlama görevlerini tamamlar.
 
-## 🎯 Proje Amacı
+---
 
-- Şirket pozisyonlarının görev tanımlarını temel alan otonom ajanlar oluşturmak.
-- İş kazası bildirimlerinde hızlı, tutarlı ve mevzuata uygun analiz, karar ve raporlama sürecini simüle etmek.
-- Çok ajanlı sistemlerin (CrewAI) kurumsal iş akışlarına nasıl entegre edilebileceğini göstermek.
-- Streamlit ile son kullanıcıya basit bir web arayüzü sunmak.
+## 📐 Mimari
 
-## 🧠 Mimari ve Kullanılan Teknolojiler
+```
+Olay Bildirimi (Kullanıcı)
+        │
+        ▼
+┌───────────────────┐
+│   İSG Uzmanı      │  Olay sınıflandırma · 5 Neden analizi · Aciliyet kararı
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│   İSG Müdürü      │  Analiz onayı · DÖF tanımlama · Sorumlu atama · Yasal uygunluk
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│  Raporlama Ajani  │  İş Kazası Raporu + Düzeltici Faaliyet Formu (Türkçe, resmi format)
+└───────────────────┘
+```
 
-- **[CrewAI](https://www.crewai.com/):** Çoklu yapay zeka ajanlarını roller, hedefler ve görevlerle tanımlamak ve yönetmek için.
-- **[Streamlit](https://streamlit.io/):** Kullanıcı etkileşimi için hızlı web arayüzü.
-- **[LangChain](https://www.langchain.com/) (CrewAI altında kullanılır):** LLM entegrasyonu ve bellek yönetimi.
-- **OpenAI API (GPT-4 önerilir):** Ajanların dil modeli olarak. (Opsiyonel: Azure OpenAI, Gemini, vb.)
-- **Python 3.10+**
+**Teknoloji Yığını:**
 
-**Ajanlar ve Sorumlulukları:**
+| Katman | Teknoloji |
+|---|---|
+| Çok-ajanlı orkestrasyon | CrewAI 1.14.5 |
+| LLM | Groq API — `llama-3.3-70b-versatile` |
+| LLM yönlendirme | LiteLLM (CrewAI dahili) |
+| Web arayüzü | Streamlit |
+| Dil | Python 3.11 |
+
+---
+
+## 🤖 Ajanlar
+
 | Ajan | Rolü | Sorumlulukları |
-|------|------|----------------|
-| İSG Uzmanı | Olay yeri inceleme | Olayı sınıflandırma, kök neden analizi (5 Neden), aciliyet belirleme |
-| İSG Müdürü | Yönetim ve onay | Uzman analizini denetleme, DÖF tanımlama, sorumlu atama, yasal uygunluk kontrolü |
-| Raporlama Sorumlusu | Dokümantasyon | Resmi İş Kazası Raporu ve Düzeltici Faaliyet Formu oluşturma |
+|---|---|---|
+| **İSG Uzmanı** | Saha inceleme | Olay tipi tespiti, 5 Neden kök neden analizi, 6331 sayılı kanun referansı |
+| **İSG Müdürü** | Yönetim ve onay | Analiz denetimi, DÖF (Düzeltici Önleyici Faaliyet) tanımlama, bütçe ve sorumlu atama |
+| **Raporlama Sorumlusu** | Dokümantasyon | İş Kazası Bildirim Formu ve Düzeltici Faaliyet Talimatı hazırlama |
 
-**İş Akışı:**  
-Olay Bildirimi → Uzman Analizi → Müdür Değerlendirmesi ve DÖF → Resmi Rapor
+---
+
+## 🚀 Kurulum
+
+### Gereksinimler
+- Python 3.11+
+- [Groq API anahtarı](https://console.groq.com/keys) (ücretsiz tier mevcut)
+
+### 1. Repoyu klonla
+
+```bash
+git clone https://github.com/ugeyik83/isg-dijital-ofis.git
+cd isg-dijital-ofis
+```
+
+### 2. Sanal ortam oluştur
+
+```bash
+python -m venv venv
+source venv/bin/activate       # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 3. API anahtarını tanımla
+
+```bash
+cp .env.example .env
+```
+
+`.env` dosyasını düzenle:
+
+```
+GROQ_API_KEY=gsk_...
+LLM_MODEL_NAME=llama-3.3-70b-versatile
+```
+
+### 4. Uygulamayı başlat
+
+```bash
+streamlit run app.py
+```
+
+---
+
+## ☁️ Streamlit Cloud Deploy
+
+1. Bu repoyu GitHub'a push et.
+2. [share.streamlit.io](https://share.streamlit.io) → **New app** → repoyu seç, `app.py` belirt.
+3. **Settings → Secrets** bölümüne ekle:
+
+```toml
+GROQ_API_KEY = "gsk_..."
+LLM_MODEL_NAME = "llama-3.3-70b-versatile"
+```
+
+4. **Deploy** — başka yapılandırma gerekmez.
+
+---
+
+## 🧪 Örnek Kullanım
+
+**Girdi:**
+```
+Pazartesi sabahı üretim hattında bir operatör, koruyucu siperi kaldırılmış makineye 
+parça yerleştirirken parmağını sıkıştırdı. İş ayakkabısı ve eldiveni vardı ancak 
+siper kasıtlı olarak devre dışı bırakılmıştı.
+```
+
+**Çıktı (özet):**
+
+```
+OLAY TİPİ         : İş Kazası (6331 sk. Md. 3/1-g)
+ACİLİYET          : Yüksek — Makine derhal durdurulmalı
+
+KÖK NEDEN ANALİZİ (5 Neden)
+  Neden 1 : Operatör siperi devre dışı bıraktı
+  Neden 2 : Siper üretim hızını yavaşlatıyor
+  Neden 3 : Bakım-tasarım uyumsuzluğu — ergonomi sorunu
+  Neden 4 : Periyodik denetim yapılmamış
+  Neden 5 : Denetim prosedürü tanımlı değil
+
+DÖF 1 : Tüm makinelerde koruyucu kontrolü — Sorumlu: Bakım Şefi — Süre: 1 hafta
+DÖF 2 : LOTO (Kilitleme-Etiketleme) eğitimi — Sorumlu: İSG Uzmanı — Süre: 2 hafta
+DÖF 3 : Siper bypass alarmı kurulumu — Sorumlu: Üretim Md. — Süre: 3 hafta
+```
+
+---
 
 ## 📁 Proje Yapısı
+
+```
 isg-dijital-ofis/
-├── agents.py # Ajan tanımları (roller, hedefler, background)
-├── tasks.py # Görev zincirleri (olay analizi, onay, raporlama)
-├── crew_setup.py # Crew (ekip) ve süreç konfigürasyonu
-├── app.py # Streamlit web arayüzü
-├── requirements.txt # Python bağımlılıkları
-├── .env.example # API anahtarı örnek dosyası
+├── agents.py          # Ajan tanımları — rol, hedef, backstory, LLM bağlantısı
+├── tasks.py           # Görev zinciri — analiz → onay → rapor
+├── crew_setup.py      # Crew ve süreç konfigürasyonu (sequential)
+├── app.py             # Streamlit arayüzü
+├── requirements.txt   # Python bağımlılıkları (sürüm sabitli)
+├── packages.txt       # Sistem bağımlılıkları (Streamlit Cloud için)
+├── .env.example       # API anahtarı şablonu
 └── README.md
+```
 
+---
 
-## 🚀 Kurulum ve Çalıştırma
+## 🔑 Desteklenen LLM Modeller
 
-### 1. Gereksinimler
-- Python 3.10 veya üstü
-- Git (opsiyonel)
-- OpenAI API anahtarı (veya diğer LLM sağlayıcısı)
+`LLM_MODEL_NAME` değişkeniyle model değiştirilebilir. Groq üzerinde önerilen modeller:
 
-### 2. Repoyu Klonlayın
-```bash
-git clone https://github.com/kullaniciadi/isg-dijital-ofis.git
-cd isg-dijital-ofis
+| Model | Hız | Kapasite |
+|---|---|---|
+| `llama-3.3-70b-versatile` | Yüksek | **Önerilen** |
+| `llama-3.1-8b-instant` | Çok yüksek | Hızlı prototipleme |
+| `mixtral-8x7b-32768` | Orta | Uzun bağlam |
 
-### 3. Sanal Ortam ve Bağımlılıklar
+> OpenAI veya Gemini kullanmak istersen `agents.py`'de `LLM(model="gpt-4o", ...)` veya `LLM(model="gemini/gemini-1.5-pro", ...)` olarak değiştir; `crewai.LLM` LiteLLM üzerinden her sağlayıcıyı destekler.
 
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+---
 
-4. API Anahtarını Tanımlayın
-.env.example dosyasını .env olarak kopyalayın ve kendi OpenAI API anahtarınızı yazın:
+## 🗺️ Geliştirme Yol Haritası
 
-bash
-cp .env.example .env
-.env dosyası içeriği:
+- [ ] CrewAI `StepCallback` ile ajan adımlarını canlı sohbet baloncuklarında gösterme
+- [ ] SQLite olay veritabanı — kalıcı kayıt ve geçmiş görüntüleme
+- [ ] PDF rapor çıktısı (ReportLab ile)
+- [ ] Risk değerlendirme matrisi oluşturan 4. ajan
+- [ ] E-posta / webhook bildirim entegrasyonu
+- [ ] Çok departmanlı genişletme (Üretim, İK, Satın Alma)
 
-text
-OPENAI_API_KEY=sk-...
-(.env dosyası zaten .gitignore içinde olmalı, asla paylaşmayın!)
+---
 
-5. Uygulamayı Başlatın
-bash
-streamlit run app.py
-Tarayıcınızda açılan arayüze bir iş kazası bildirimi yazın ve simülasyonu başlatın.
+## 📄 Lisans
 
-🧪 Örnek Senaryo
-Girdi:
-"Pazartesi sabahı, üretim hattında bir operatör, koruyucu siperi kaldırılmış makineye parça yerleştirirken parmağını sıkıştırdı. İş ayakkabısı ve eldiveni vardı ancak siper devre dışı bırakılmış."
-
-Beklenen Çıktı (Rapor):
-
-Olay türü: İş kazası
-
-Kök neden: Makine koruyucusunun kasıtlı olarak devre dışı bırakılması, denetim eksikliği
-
-DÖF 1: Tüm makinelerde koruyucu donanımın çalışır durumda olduğunun günlük kontrolü (Sorumlu: Bakım Şefi, Süre: 1 hafta)
-
-DÖF 2: Operatörlere "Kilitleme-Etiketleme" eğitimi verilmesi (Sorumlu: İSG Uzmanı, Süre: 2 hafta)
-
-Resmi rapor başlıkları ve aksiyon planı.
-
-📌 Geliştirme Planı (Yol Haritası)
-Ara adımları Streamlit sohbet baloncuklarında canlı gösterme (StepCallback)
-
-Olay veritabanı (SQLite) ile kalıcı kayıt ve geçmiş görüntüleme
-
-E‑posta veya webhook ile gerçek bildirim gönderme
-
-Risk değerlendirme matrisi oluşturan ek ajan
-
-Çok departmanlı genişletme (Üretim, İK, Satın Alma dahil)
-
-Farklı LLM sağlayıcıları için yapılandırma (Azure OpenAI, Gemini, yerel modeller)
-
-🤝 Katkıda Bulunun
-Proje fikir aşamasındadır ve katkılara açıktır. Pull request göndermekten çekinmeyin. Büyük değişiklikler için lütfen önce bir issue açarak tartışalım.
-
-📄 Lisans
-MIT Lisansı altında sunulmaktadır. İşletmenizin ihtiyaçlarına göre uyarlayabilirsiniz.
+MIT — işletme ihtiyaçlarına göre uyarlayabilirsiniz.
